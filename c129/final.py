@@ -1,23 +1,35 @@
 import csv
-dataset_1=[]
-dataset_2=[]
-with open("dataset_1.csv","r")as f:
-    csvreader=csv.reader(f)
-    for row in csvreader:
-        dataset_1.append(row)
-with open("dataset_2_sorted.csv","r") as f:
-    csvreader=csv.reader(f)
-    for row in csvreader:
-        dataset_2.append(row)
-headers_1=dataset_1[0]
-planet_data_1=dataset_1[1:]
-headers_2=dataset_2[0]
-planet_data_2=dataset_2[1:]
-header=headers_1=headers_2
-planet_data=[]
-for index,data_row in enumerate(planet_data_1):
-    planet_data.append(planet_data_1[index]+planet_data_2[index])
-with open("final.csv","a+") as f:
-    csvwriter=csv.writer(f)
-    csvwriter.writerow(header)
-    csvwriter.writerows(planet_data)
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+INPUT_1 = BASE_DIR / "dataset_1.csv"
+INPUT_2 = BASE_DIR / "dataset_2_sorted.csv"
+OUTPUT = BASE_DIR / "final.csv"
+
+def read_csv(path):
+    with path.open("r", newline="", encoding="utf-8") as file:
+        rows = list(csv.reader(file))
+    if not rows:
+        raise ValueError(f"{path.name} is empty")
+    return rows[0], rows[1:]
+
+headers_1, data_1 = read_csv(INPUT_1)
+headers_2, data_2 = read_csv(INPUT_2)
+
+if len(data_1) != len(data_2):
+    raise ValueError(
+        "The datasets have different row counts; refusing to merge by row position "
+        f"({len(data_1)} vs {len(data_2)}). Join on a verified shared key instead."
+    )
+
+if any(len(row) != len(headers_1) for row in data_1):
+    raise ValueError("dataset_1.csv contains rows with inconsistent column counts")
+if any(len(row) != len(headers_2) for row in data_2):
+    raise ValueError("dataset_2_sorted.csv contains rows with inconsistent column counts")
+
+with OUTPUT.open("w", newline="", encoding="utf-8") as file:
+    writer = csv.writer(file)
+    writer.writerow(headers_1 + headers_2)
+    writer.writerows(left + right for left, right in zip(data_1, data_2))
+
+print(f"Wrote {len(data_1)} merged rows to {OUTPUT.name}")
